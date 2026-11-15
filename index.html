@@ -15,14 +15,15 @@
       <h1>Смета за 5 минут</h1>
       <p>Добавьте позиции и цены — суммы и итог посчитаются автоматически.</p>
     </header>
+    <h1 id="print-title" class="print-only"></h1>
 
     <section class="card details" aria-labelledby="details-title">
       <h2 id="details-title">Реквизиты</h2>
       <div class="details-grid">
         <label>От кого<input type="text" id="sender" placeholder="Ваше имя или компания"></label>
         <label>Для кого<input type="text" id="recipient" placeholder="Имя или компания клиента"></label>
-        <label>Номер сметы<input type="text" id="estimate-number" placeholder="Например, 001"></label>
-        <label>Дата<input type="date" id="estimate-date"></label>
+        <label class="document-meta">Номер сметы<input type="text" id="estimate-number" placeholder="Например, 001"></label>
+        <label class="document-meta">Дата<input type="date" id="estimate-date"></label>
       </div>
     </section>
 
@@ -60,6 +61,15 @@
         <output id="total" aria-live="polite" aria-atomic="true">0 ₸</output>
       </div>
     </section>
+    <section class="card comment-card" aria-labelledby="comment-title">
+      <h2 id="comment-title"><label for="comment">Комментарий</label></h2>
+      <textarea id="comment" rows="4" placeholder="Сроки выполнения, условия оплаты"></textarea>
+    </section>
+    <p class="print-only signature">Подпись ____________________</p>
+    <div class="print-actions">
+      <button type="button" id="save-pdf" class="add-button">Сохранить PDF</button>
+      <p class="keyboard-hint">В окне печати выберите «Сохранить как PDF». Для чистого документа отключите колонтитулы браузера.</p>
+    </div>
   </main>
 
   <template id="item-template">

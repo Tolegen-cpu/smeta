@@ -18,12 +18,15 @@ h1 { font-size: clamp(30px, 4vw, 42px); line-height: 1.2; letter-spacing: -.04em
 h2 { font-size: 20px; margin: 0; letter-spacing: -.02em; }
 .details-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px 24px; margin-top: 24px; }
 label { display: grid; gap: 8px; font-size: 14px; font-weight: 600; }
-input, select, button { font: inherit; min-width: 44px; min-height: 44px; }
-input, select { width: 100%; border: 1px solid #cdd8d1; border-radius: 8px; background: #fff; color: #24342e; padding: 11px 12px; font-size: 16px; }
-input::placeholder { color: #87948c; opacity: 1; }
+input, select, textarea, button { font: inherit; min-width: 44px; min-height: 44px; }
+input, select, textarea { width: 100%; border: 1px solid #cdd8d1; border-radius: 8px; background: #fff; color: #24342e; padding: 11px 12px; font-size: 16px; }
+input::placeholder, textarea::placeholder { color: #87948c; opacity: 1; }
+textarea { resize: vertical; line-height: 1.5; margin-top: 16px; }
+.comment-card h2 label { font: inherit; }
+.print-only, .print-value { display: none; }
 button { cursor: pointer; border-radius: 8px; }
-input:hover, select:hover { border-color: #8da898; }
-:where(input, select, button):focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+input:hover, select:hover, textarea:hover { border-color: #8da898; }
+:where(input, select, textarea, button):focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
 .section-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 24px; }
 .section-note, .keyboard-hint { font-size: 13px; color: #617168; }
 table { width: 100%; border-collapse: collapse; table-layout: fixed; }
@@ -58,7 +61,7 @@ td:last-child, th:last-child { padding-right: 0; }
 #total { color: var(--accent); font-size: clamp(28px, 4vw, 38px); font-weight: 750; letter-spacing: -.04em; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; min-width: 0; }
 .visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
 
-@media (min-width: 641px) and (max-width: 900px) {
+@media screen and (min-width: 641px) and (max-width: 900px) {
   .positions { padding: 20px 14px; }
   td { padding: 10px 3px; }
   input, select { padding-inline: 8px; }
@@ -67,7 +70,7 @@ td:last-child, th:last-child { padding-right: 0; }
   th:nth-child(3) { width: 16%; }
 }
 
-@media (max-width: 640px) {
+@media screen and (max-width: 640px) {
   .page { padding: 28px 16px; }
   .page-header { margin-bottom: 24px; }
   .card { padding: 20px; border-radius: 12px; margin-bottom: 16px; }
@@ -87,4 +90,42 @@ td:last-child, th:last-child { padding-right: 0; }
   .add-button { width: 100%; margin-top: 4px; }
   .adjustments-grid { grid-template-columns: minmax(0, 1fr); gap: 16px; }
   .grand-total { align-items: flex-start; flex-direction: column; gap: 12px; }
+}
+
+@page { size: A4 portrait; margin: 15mm; }
+
+@media print {
+  :root, body { background: white; color: black; font-size: 10pt; }
+  .page { width: 100%; margin: 0; padding: 0; }
+  .page-header, button, .print-actions, .adjustments-grid, .keyboard-hint,
+  .section-note, .document-meta, .delete-cell, th:last-child { display: none !important; }
+  .print-only, .print-value { display: block; }
+  #print-title { font-size: 20pt; letter-spacing: normal; margin: 0 0 8mm; overflow-wrap: anywhere; }
+  .card { border: 0; border-radius: 0; padding: 0; margin: 0 0 6mm; }
+  h2 { font-size: 12pt; letter-spacing: normal; }
+  .details-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5mm; margin-top: 3mm; }
+  .details label { display: block; font-size: 10pt; }
+  .details .print-value { margin-top: 2mm; font-weight: 400; }
+  .details input, .positions input, .positions select, .comment-card textarea { display: none; }
+  .print-value { white-space: pre-wrap; overflow-wrap: anywhere; }
+  .section-heading { margin-bottom: 3mm; }
+  table { width: 100%; table-layout: fixed; border-collapse: collapse; }
+  thead { display: table-header-group; }
+  th, td, th:first-child, td:first-child, th:last-child, td:last-child { border: 1px solid #555; padding: 2.5mm; vertical-align: top; color: black; font-size: 10pt; }
+  th { font-weight: 600; }
+  th:first-child { width: 34%; }
+  th:nth-child(2), th:nth-child(3) { width: 13%; }
+  th:nth-child(4), th:nth-child(5) { width: 20%; }
+  td:nth-child(2), td:nth-child(4) { text-align: right; }
+  tr { break-inside: avoid; }
+  .details, .total-card { break-inside: avoid; }
+  .total-card { width: 100%; max-width: 105mm; margin-left: auto; }
+  .summary { margin-bottom: 3mm; }
+  .summary-row { padding-block: 1mm; gap: 5mm; }
+  .grand-total { padding-top: 3mm; border-top: 1px solid black; gap: 5mm; }
+  .total-card h2 { font-size: 12pt; }
+  #total { color: black; font-size: 16pt; letter-spacing: normal; }
+  .comment-card h2 { break-after: avoid; }
+  .comment-card .print-value { margin-top: 3mm; line-height: 1.5; }
+  .signature { margin: 8mm 0 0; break-inside: avoid; }
 }

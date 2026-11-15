@@ -97,6 +97,30 @@ items.addEventListener("click", (event) => {
   recalculate();
 });
 
+function preparePrint() {
+  recalculate();
+  const number = document.querySelector("#estimate-number").value.trim() || "—";
+  const date = document.querySelector("#estimate-date").value;
+  const formattedDate = date ? date.split("-").reverse().join(".") : "—";
+  document.querySelector("#print-title").textContent = `Смета № ${number} от ${formattedDate}`;
+
+  // Plain text copies let long values wrap fully in print without changing the inputs.
+  for (const value of document.querySelectorAll(".print-value")) value.remove();
+  for (const field of document.querySelectorAll(".details input, #items input, #items select, #comment")) {
+    const value = document.createElement("span");
+    value.className = "print-value";
+    value.textContent = field.value;
+    value.setAttribute("aria-hidden", "true");
+    field.insertAdjacentElement("afterend", value);
+  }
+}
+
+document.querySelector("#save-pdf").addEventListener("click", () => {
+  preparePrint();
+  window.print();
+});
+window.addEventListener("beforeprint", preparePrint);
+
 const today = new Date();
 document.querySelector("#estimate-date").value = [
   today.getFullYear(),
