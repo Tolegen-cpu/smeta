@@ -14,6 +14,12 @@ const vatOutput = document.querySelector("#vat-amount");
 const moneyFormatter = new Intl.NumberFormat("ru-RU", {
   maximumFractionDigits: 0,
 });
+const draftKey = "estimate-draft-v1";
+const draftFieldIds = ["sender", "recipient", "estimate-number", "estimate-date", "discount-rate", "vat-rate", "currency", "comment"];
+const draftSelector = ".details input, #items input, #items select, #discount-rate, #vat-rate, #currency, #comment";
+const rowFields = { name: ".item-name", quantity: ".item-quantity", unit: "select", price: ".item-price" };
+let savingEnabled = false;
+let copyTimer;
 
 function parseNumber(value) {
   const normalized = value.trim().replace(/[ \u00a0\u202f]/g, "").replace(",", ".");
@@ -64,11 +70,15 @@ function updateCurrency() {
   recalculate();
 }
 
-function addItem(focus = true) {
+function addItem(focus = true, values = null) {
   const row = itemTemplate.content.firstElementChild.cloneNode(true);
+  if (values) {
+    for (const [key, selector] of Object.entries(rowFields)) row.querySelector(selector).value = values[key];
+  }
   items.append(row);
   if (focus) row.querySelector(".item-name").focus();
   updateCurrency();
+  saveDraft();
 }
 
 addButton.addEventListener("click", () => addItem());
@@ -95,14 +105,136 @@ items.addEventListener("click", (event) => {
   if (nextRow) nextRow.querySelector(".item-name").focus();
   else addButton.focus();
   recalculate();
+  saveDraft();
+});
+
+function clearCopyFeedback() {
+  clearTimeout(copyTimer);
+  document.querySelector("#copy-status").textContent = "";
+  document.querySelector("#manual-copy").hidden = true;
+  document.querySelector("#share-text").value = "";
+}
+
+function saveDraft() {
+  if (!savingEnabled) return;
+  clearCopyFeedback();
+  const fields = Object.fromEntries(draftFieldIds.map(id => [id, document.getElementById(id).value]));
+  const rows = Array.from(items.rows, row => Object.fromEntries(
+    Object.entries(rowFields).map(([key, selector]) => [key, row.querySelector(selector).value])
+  ));
+  try {
+    localStorage.setItem(draftKey, JSON.stringify({ version: 1, fields, rows }));
+    document.querySelector("#draft-status").textContent = "";
+  } catch {
+    document.querySelector("#draft-status").textContent = "Не удалось сохранить черновик в браузере. Перед закрытием сохраните PDF или скопируйте текст.";
+  }
+}
+
+function restoreDraft() {
+  try {
+    const saved = localStorage.getItem(draftKey);
+    if (!saved) return false;
+    const draft = JSON.parse(saved);
+    const valid = draft && draft.version === 1 && draft.fields && Array.isArray(draft.rows)
+      && draftFieldIds.every(id => typeof draft.fields[id] === "string")
+      && ["₸", "₽", "$", "€"].includes(draft.fields.currency)
+      && draft.rows.every(row => row && Object.keys(rowFields).every(key => typeof row[key] === "string")
+        && ["шт", "час", "услуга"].includes(row.unit));
+    if (!valid) throw new Error("Invalid draft");
+    for (const id of draftFieldIds) document.getElementById(id).value = draft.fields[id];
+    for (const row of draft.rows) addItem(false, row);
+    updateCurrency();
+    return true;
+  } catch {
+    document.querySelector("#draft-status").textContent = "Не удалось восстановить черновик. Проверьте доступность хранилища браузера.";
+    return false;
+  }
+}
+
+for (const type of ["input", "change"]) {
+  document.addEventListener(type, event => {
+    if (event.target.matches(draftSelector)) saveDraft();
+  });
+}
+
+function todayDate() {
+  const today = new Date();
+  return [today.getFullYear(), String(today.getMonth() + 1).padStart(2, "0"), String(today.getDate()).padStart(2, "0")].join("-");
+}
+
+document.querySelector("#new-estimate").addEventListener("click", () => {
+  if (!window.confirm("Создать новую смету? Текущий черновик будет очищен.")) return;
+  const currentNumber = document.querySelector("#estimate-number").value.trim();
+  const nextNumber = /\d+$/.test(currentNumber)
+    ? currentNumber.replace(/\d+$/, digits => (BigInt(digits) + 1n).toString().padStart(digits.length, "0"))
+    : "1";
+  savingEnabled = false;
+  for (const id of draftFieldIds) document.getElementById(id).value = "";
+  discountRate.value = vatRate.value = "0";
+  currency.value = "₸";
+  document.querySelector("#estimate-number").value = nextNumber;
+  document.querySelector("#estimate-date").value = todayDate();
+  items.replaceChildren();
+  for (const value of document.querySelectorAll(".print-value")) value.remove();
+  document.querySelector("#print-title").textContent = "";
+  addItem(false);
+  savingEnabled = true;
+  saveDraft();
+  document.querySelector("#sender").focus();
+});
+
+function estimateHeading() {
+  const number = document.querySelector("#estimate-number").value.trim() || "—";
+  const date = document.querySelector("#estimate-date").value;
+  return `Смета № ${number} от ${date ? date.split("-").reverse().join(".") : "—"}`;
+}
+
+function shareText() {
+  recalculate();
+  const lines = [estimateHeading()];
+  for (const [id, label] of [["sender", "От кого"], ["recipient", "Для кого"]]) {
+    const value = document.getElementById(id).value.trim();
+    if (value) lines.push(`${label}: ${value}`);
+  }
+  lines.push("");
+  const quantityFormatter = new Intl.NumberFormat("ru-RU", { maximumFractionDigits: 20 });
+  for (const row of items.rows) {
+    const name = row.querySelector(".item-name").value.trim() || "Без наименования";
+    const quantity = quantityFormatter.format(parseNumber(row.querySelector(".item-quantity").value)).replace(/[\u00a0\u202f]/g, " ");
+    const price = formatMoney(parseNumber(row.querySelector(".item-price").value));
+    lines.push(`• ${name} — ${quantity} ${row.querySelector("select").value} × ${price} = ${row.querySelector(".item-total").textContent}`);
+  }
+  lines.push("", `Сумма: ${subtotalOutput.textContent}`);
+  if (!document.querySelector("#discount-row").hidden) {
+    lines.push(`Скидка (${Math.min(100, parseNumber(discountRate.value))} %): ${discountOutput.textContent}`);
+    lines.push(`Сумма со скидкой: ${discountedOutput.textContent}`);
+  }
+  if (!document.querySelector("#vat-row").hidden) lines.push(`НДС (${parseNumber(vatRate.value)} %): ${vatOutput.textContent}`);
+  lines.push(`Итого к оплате: ${totalOutput.textContent}`);
+  const comment = document.querySelector("#comment").value.trim();
+  if (comment) lines.push("", `Комментарий: ${comment}`);
+  return lines.join("\n");
+}
+
+document.querySelector("#copy-whatsapp").addEventListener("click", async () => {
+  clearCopyFeedback();
+  const text = shareText();
+  try {
+    await navigator.clipboard.writeText(text);
+    document.querySelector("#copy-status").textContent = "Скопировано ✓";
+    copyTimer = setTimeout(() => { document.querySelector("#copy-status").textContent = ""; }, 2000);
+  } catch {
+    document.querySelector("#manual-copy").hidden = false;
+    const field = document.querySelector("#share-text");
+    field.value = text;
+    field.focus();
+    field.select();
+  }
 });
 
 function preparePrint() {
   recalculate();
-  const number = document.querySelector("#estimate-number").value.trim() || "—";
-  const date = document.querySelector("#estimate-date").value;
-  const formattedDate = date ? date.split("-").reverse().join(".") : "—";
-  document.querySelector("#print-title").textContent = `Смета № ${number} от ${formattedDate}`;
+  document.querySelector("#print-title").textContent = estimateHeading();
 
   // Plain text copies let long values wrap fully in print without changing the inputs.
   for (const value of document.querySelectorAll(".print-value")) value.remove();
@@ -121,11 +253,6 @@ document.querySelector("#save-pdf").addEventListener("click", () => {
 });
 window.addEventListener("beforeprint", preparePrint);
 
-const today = new Date();
-document.querySelector("#estimate-date").value = [
-  today.getFullYear(),
-  String(today.getMonth() + 1).padStart(2, "0"),
-  String(today.getDate()).padStart(2, "0"),
-].join("-");
-
-addItem(false);
+document.querySelector("#estimate-date").value = todayDate();
+if (!restoreDraft()) addItem(false);
+savingEnabled = true;

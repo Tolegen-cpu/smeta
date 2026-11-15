@@ -68,6 +68,14 @@
     <p class="print-only signature">Подпись ____________________</p>
     <div class="print-actions">
       <button type="button" id="save-pdf" class="add-button">Сохранить PDF</button>
+      <button type="button" id="copy-whatsapp" class="secondary-button">Скопировать для WhatsApp</button>
+      <button type="button" id="new-estimate" class="secondary-button">Новая смета</button>
+      <p id="copy-status" role="status" class="action-status"></p>
+      <p id="draft-status" role="status" class="action-status"></p>
+      <div id="manual-copy" hidden>
+        <label for="share-text">Скопируйте текст вручную</label>
+        <textarea id="share-text" rows="8" readonly></textarea>
+      </div>
       <p class="keyboard-hint">В окне печати выберите «Сохранить как PDF». Для чистого документа отключите колонтитулы браузера.</p>
     </div>
   </main>
