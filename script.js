@@ -73,12 +73,23 @@ function updateCurrency() {
 function addItem(focus = true, values = null) {
   const row = itemTemplate.content.firstElementChild.cloneNode(true);
   if (values) {
+    ensureUnitOption(row.querySelector("select"), values.unit);
     for (const [key, selector] of Object.entries(rowFields)) row.querySelector(selector).value = values[key];
+    if (typeof values.catalogId === "string") row.dataset.catalogId = values.catalogId;
   }
   items.append(row);
   if (focus) row.querySelector(".item-name").focus();
   updateCurrency();
   saveDraft();
+  return row;
+}
+
+function ensureUnitOption(select, unit) {
+  if (Array.from(select.options).some(option => option.value === unit)) return;
+  const option = document.createElement("option");
+  option.value = unit;
+  option.textContent = unit;
+  select.append(option);
 }
 
 addButton.addEventListener("click", () => addItem());
@@ -119,9 +130,10 @@ function saveDraft() {
   if (!savingEnabled) return;
   clearCopyFeedback();
   const fields = Object.fromEntries(draftFieldIds.map(id => [id, document.getElementById(id).value]));
-  const rows = Array.from(items.rows, row => Object.fromEntries(
-    Object.entries(rowFields).map(([key, selector]) => [key, row.querySelector(selector).value])
-  ));
+  const rows = Array.from(items.rows, row => ({
+    ...Object.fromEntries(Object.entries(rowFields).map(([key, selector]) => [key, row.querySelector(selector).value])),
+    catalogId: row.dataset.catalogId || "",
+  }));
   try {
     localStorage.setItem(draftKey, JSON.stringify({ version: 1, fields, rows }));
     document.querySelector("#draft-status").textContent = "";
@@ -139,7 +151,8 @@ function restoreDraft() {
       && draftFieldIds.every(id => typeof draft.fields[id] === "string")
       && ["₸", "₽", "$", "€"].includes(draft.fields.currency)
       && draft.rows.every(row => row && Object.keys(rowFields).every(key => typeof row[key] === "string")
-        && ["шт", "час", "услуга"].includes(row.unit));
+        && row.unit.trim().length > 0 && row.unit.length <= 100
+        && (row.catalogId === undefined || typeof row.catalogId === "string"));
     if (!valid) throw new Error("Invalid draft");
     for (const id of draftFieldIds) document.getElementById(id).value = draft.fields[id];
     for (const row of draft.rows) addItem(false, row);

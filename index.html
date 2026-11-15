@@ -7,6 +7,7 @@
   <title>Смета за 5 минут</title>
   <link rel="stylesheet" href="styles.css">
   <script src="script.js" defer></script>
+  <script src="catalog.js" defer></script>
 </head>
 <body>
   <main class="page">
@@ -40,6 +41,14 @@
         <tbody id="items"></tbody>
       </table>
       <button type="button" id="add-item" class="add-button">+ Добавить позицию</button>
+      <button type="button" id="update-prices" class="secondary-button">Обновить цены</button>
+      <section id="price-review" class="price-review" aria-labelledby="price-review-title" hidden>
+        <h3 id="price-review-title" tabindex="-1">Изменения цен</h3>
+        <p id="price-review-note" role="status"></p>
+        <ul id="price-changes"></ul>
+        <button type="button" id="confirm-prices" class="add-button">Подтвердить обновление</button>
+        <button type="button" id="cancel-prices" class="secondary-button">Отмена</button>
+      </section>
       <p class="keyboard-hint">Enter в поле последней строки добавит новую позицию.</p>
       <div class="adjustments-grid">
         <label>Скидка, %<input id="discount-rate" type="text" inputmode="decimal" value="0" autocomplete="off" aria-describedby="discount-hint"></label>
@@ -48,6 +57,32 @@
       </div>
       <p class="keyboard-hint" id="discount-hint">Скидка — от 0 до 100 %. НДС начисляется на сумму со скидкой.</p>
     </section>
+
+    <details class="card catalog">
+      <summary>Каталог работ и материалов</summary>
+      <p class="keyboard-hint">Цены каталога используются в выбранной валюте без пересчёта. Добавленные позиции сохраняют свою цену до подтверждения обновления.</p>
+      <div class="catalog-filters">
+        <label>Поиск по названию<input id="catalog-search" type="search" placeholder="Название работы или материала"></label>
+        <label>Категория<select id="catalog-filter"><option value="">Все категории</option></select></label>
+      </div>
+      <p id="catalog-status" role="status" class="action-status"></p>
+      <p id="catalog-storage-status" role="status" class="action-status"></p>
+      <div id="catalog-list" class="catalog-list"></div>
+      <form id="catalog-form" class="catalog-editor">
+        <h3 id="catalog-editor-title">Новая работа или материал</h3>
+        <div class="details-grid">
+          <label>Название<input id="catalog-name" required maxlength="300"></label>
+          <label>Единица измерения<input id="catalog-unit" list="catalog-units" value="шт" required maxlength="40"></label>
+          <label>Цена<input id="catalog-price" inputmode="decimal" placeholder="0" aria-describedby="catalog-price-hint"></label>
+          <label>Категория<input id="catalog-category" list="catalog-categories" required maxlength="100" placeholder="Например, Работы или Материалы"></label>
+        </div>
+        <datalist id="catalog-units"><option value="шт"></option><option value="час"></option><option value="услуга"></option><option value="м"></option><option value="м²"></option><option value="м³"></option><option value="кг"></option><option value="л"></option><option value="упак"></option></datalist>
+        <datalist id="catalog-categories"></datalist>
+        <p id="catalog-price-hint" class="keyboard-hint">Цена за единицу, в валюте сметы. Пустое или неверное число считается нулём.</p>
+        <button type="submit" class="add-button" id="catalog-save">Создать позицию</button>
+        <button type="button" class="secondary-button" id="catalog-cancel" hidden>Отменить редактирование</button>
+      </form>
+    </details>
 
     <section class="card total-card" aria-labelledby="total-title">
       <dl class="summary" aria-live="polite" aria-atomic="true">
